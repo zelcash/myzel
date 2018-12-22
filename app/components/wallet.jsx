@@ -10,6 +10,9 @@ import zelcashjs from 'zelcashjs'
 import zelcashwalletutils from '../lib/utils'
 import hdwallet from '../lib/hdwallet'
 import FileSaver from 'file-saver'
+import bip32 from 'bip32'
+import bip39 from 'bip39'
+import bitgotx from 'bitgo-utxo-lib'
 
 import MDRefresh from 'react-icons/lib/md/refresh'
 import MDCopy from 'react-icons/lib/md/content-copy'
@@ -28,7 +31,8 @@ const throttledAxiosGet = zelcashwalletutils.promiseDebounce(axios.get, 1000, 5)
 var UNLOCK_WALLET_TYPE = {
   IMPORT_WALLET: 0,
   HD_WALLET: 1,
-  PASTE_PRIV_KEY: 2
+  PASTE_PRIV_KEY: 2,
+  IMPORT_COPAY: 3
 }
 
 // Components
@@ -116,6 +120,7 @@ class ZWalletUnlockKey extends React.Component {
   constructor(props){
     super(props)
 
+    this.unlockCopayWallet = this.unlockCopayWallet.bind(this)
     this.unlockHDWallet = this.unlockHDWallet.bind(this)
     this.loadWalletDat = this.loadWalletDat.bind(this)
     this.toggleShowPassword = this.toggleShowPassword.bind(this)
@@ -124,6 +129,8 @@ class ZWalletUnlockKey extends React.Component {
     this.state = {
       showPassword: false,
       secretPhrase: '',
+      copayPhrase: '',
+      copayMaximum: 20,
       invalidPrivateKey: false,
       secretPhraseTooShort: false, 
       // Style for input button
@@ -162,6 +169,47 @@ class ZWalletUnlockKey extends React.Component {
 
       // Set private key and unlock them (we know it'll work so no need to validate)
       this.props.setPrivateKeys(pk, true)
+    } catch (err){
+      this.setState({
+        secretPhraseTooShort: true
+      })
+    }
+  }
+
+  unlockCopayWallet(){
+    try{
+      // Generate private keys from copay recovery phrase
+      var pks = []
+      const i = 0
+      if (this.state.copayPhrase.split(' ').length != 12) {
+        throw err
+      }
+      const seed = bip39.mnemonicToSeed(this.state.copayPhrase)
+      const root = bip32.fromSeed(seed)
+
+      this.setState({
+        secretPhraseTooShort: false
+      })
+
+      var maximum = this.state.copayMaximum
+      if (maximum > 100) {
+        maximum = 100
+      }
+      //receive addresses
+      for (let k = 0; k < maximum; k++){
+        let child = root.deriveHardened(44).deriveHardened(0).deriveHardened(i).derive(0).derive(k)
+        let wif = child.toWIF()
+        pks.push(wif)
+      }
+
+      //change addresses
+      for (let k = 0; k < maximum; k++){
+        let child = root.deriveHardened(44).deriveHardened(0).deriveHardened(i).derive(1).derive(k)
+        let wif = child.toWIF()
+        pks.push(wif)
+      }
+
+      this.props.setPrivateKeys(pks, true)
     } catch (err){
       this.setState({
         secretPhraseTooShort: true
@@ -273,6 +321,35 @@ class ZWalletUnlockKey extends React.Component {
           </InputGroup>
           <div style={{paddingTop: '8px'}}>
             <Button color="secondary" className="btn-block" onClick={this.unlockHDWallet}><span className="wallet4">Generate/Unlock Wallet</span></Button>
+          </div>
+        </div>
+      )
+    }
+
+    else if (this.props.unlockType == UNLOCK_WALLET_TYPE.IMPORT_COPAY){
+      return (
+        <div>
+          <Alert color="warning"><strong><span className="wallet1">Warning.</span></strong>&nbsp;<span className="wallet2">Only 20 change addresses and 20 receiving addresses are generated with maximum up to 100. If you think your Copay used more, contact Zel team. You can find out specific number of addresses needed in Settings -> specific wallet -> More options -> Wallet addresses. Look for the highest NUMBER in xpub/0/NUMBER or m/0/NUMBER. </span></Alert>
+          {this.state.secretPhraseTooShort ? <Alert color="danger"><strong><span className="import1">Error.</span></strong>&nbsp;<span className="wallet3">Invalid Copay recovery phrase. Recovery phrase shall contain 12 words separated with single space.</span></Alert> : '' }
+          <InputGroup>
+          <InputGroupAddon addonType="prepend">Copay recovery phrase</InputGroupAddon>                                     
+            <Input
+              type="text"
+              onChange={(e) => this.setState({copayPhrase: e.target.value})}
+              placeholder="e.g. ketchup seven good shove victory robust spirit airport enrich auction spoon raw"
+            />                
+          </InputGroup>
+          <InputGroup>
+          <InputGroupAddon addonType="prepend">Maximum NUMBER of addresses</InputGroupAddon>                                     
+            <Input
+              type="number"
+              max="100"
+              onChange={(e) => this.setState({copayMaximum: e.target.value})}
+              value={this.state.copayMaximum}
+            />                    
+          </InputGroup>
+          <div style={{paddingTop: '8px'}}>
+            <Button color="secondary" className="btn-block" onClick={this.unlockCopayWallet}><span className="wallet4">Generate/Unlock Copay Wallet</span></Button>
           </div>
         </div>
       )
@@ -565,7 +642,8 @@ class ZSendZEL extends React.Component {
     })
   }
 
-  handleSendZEL(){      
+  handleSendZEL(){
+    var self = this      
     const value = this.state.amount;
     const fee = this.state.fee;
     const recipientAddress = this.state.recipientAddress;
@@ -612,7 +690,17 @@ class ZSendZEL extends React.Component {
     }
 
     // Private key
-    const senderPrivateKey = this.props.publicAddresses[senderAddress].privateKey;
+    var senderPrivateKey = this.props.publicAddresses[senderAddress].privateKey;
+    var wifHash = this.props.settings.useTestNet ? zelcashjs.config.testnet.wif : zelcashjs.config.mainnet.wif
+    console.log(senderPrivateKey)
+    if (senderPrivateKey.length !== 64){
+      var senderPrivateKeyWIF = senderPrivateKey
+      var senderPrivateKey = zelcashjs.address.WIFToPrivKey(senderPrivateKey)
+    }
+    else{
+      var senderPrivateKeyWIF = zelcashjs.address.privKeyToWIF(senderPrivateKey)
+    }          
+    var senderPrivateKeyWIF = zelcashjs.address.privKeyToWIF(senderPrivateKey, true, wifHash)
 
     // Get previous transactions
     const prevTxURL = zelcashwalletutils.urlAppend(this.props.settings.insightAPI, 'addr/') + senderAddress + '/utxo'
@@ -636,7 +724,8 @@ class ZSendZEL extends React.Component {
       .then(function (info_resp){
         this.setProgressValue(50)
         const info_data = info_resp.data
-
+        var blockHeight = info_data.info.blocks
+        var expiryHeight = info_data.info.blocks + 30 //one hour
 
           // Iterate through each utxo
           // append it to history
@@ -648,7 +737,8 @@ class ZSendZEL extends React.Component {
             history = history.concat({
               txid: tx_data[i].txid,
               vout: tx_data[i].vout,
-              scriptPubKey: tx_data[i].scriptPubKey,            
+              scriptPubKey: tx_data[i].scriptPubKey,
+              satoshis: tx_data[i].satoshis     
             });
             
             // How many satoshis do we have so far
@@ -672,16 +762,45 @@ class ZSendZEL extends React.Component {
             recipients = recipients.concat({address: senderAddress, satoshis: refundSatoshis})
           }
 
-          // Create transaction
-          var txObj = zelcashjs.transaction.createRawTx(history, recipients)
+          var txHexString;
+          if (blockHeight >= 250000 || this.props.settings.useTestNet) {
+            var network = this.props.settings.useTestNet ? bitgotx.networks.zcashTest : bitgotx.networks.zelcash;
+            var maxFeeRate = satoshisfeesToSend;
+            const txb = new bitgotx.TransactionBuilder(network, maxFeeRate);
+            var lockTime = blockHeight - 420;
 
-          // Sign each history transcation          
-          for (var i = 0; i < history.length; i ++){
-            txObj = zelcashjs.transaction.signTx(txObj, i, senderPrivateKey, this.props.settings.compressPubKey)
+            txb.setVersion(4);
+            txb.setVersionGroupId(0x892F2085);
+            txb.setExpiryHeight(expiryHeight);
+            //txb.setLockTime(lockTime);
+
+            // Add Inputs/Outputs
+            history.forEach(x => txb.addInput(x.txid, x.vout));
+            recipients.forEach(x => txb.addOutput(x.address, x.satoshis));
+            console.log(txb)
+
+            // Sign
+            var keyPair = bitgotx.ECPair.fromWIF(senderPrivateKeyWIF, network)
+            const hashType = bitgotx.Transaction.SIGHASH_ALL // eslint-disable-line
+            for (let i = 0; i < txb.inputs.length; i++) {
+              txb.sign(i, keyPair, null, hashType, history[i].satoshis);
+            }
+            console.log(txb)
+            // Make it rain
+            const result = txb.build();
+            txHexString = result.toHex();
+          } else {
+            // Create transaction
+            var txObj = zelcashjs.transaction.createRawTx(history, recipients)
+
+            // Sign each history transcation          
+            for (var i = 0; i < history.length; i ++){
+              txObj = zelcashjs.transaction.signTx(txObj, i, senderPrivateKey, this.props.settings.compressPubKey)
+            }
+
+            // Convert it to hex string
+            txHexString = zelcashjs.transaction.serializeTx(txObj)
           }
-
-          // Convert it to hex string
-          const txHexString = zelcashjs.transaction.serializeTx(txObj)
 
           axios.post(sendRawTxURL, {rawtx: txHexString})
           .then(function(sendtx_resp){         
@@ -813,7 +932,8 @@ class ZWalletSelectUnlockType extends React.Component {
         <ButtonGroup vertical>                 
           <Button color="secondary" onClick={() => this.onRadioBtnClick(UNLOCK_WALLET_TYPE.HD_WALLET)} active={this.state.cSelected === UNLOCK_WALLET_TYPE.HD_WALLET}><span className="settings6">Enter secret phrase</span></Button>
           <Button color="secondary" onClick={() => this.onRadioBtnClick(UNLOCK_WALLET_TYPE.IMPORT_WALLET)} active={this.state.cSelected === UNLOCK_WALLET_TYPE.IMPORT_WALLET}><span className="settings7">Load wallet.dat</span></Button>        
-          <Button color="secondary" onClick={() => this.onRadioBtnClick(UNLOCK_WALLET_TYPE.PASTE_PRIV_KEY)} active={this.state.cSelected === UNLOCK_WALLET_TYPE.PASTE_PRIV_KEY}><span className="settings8">Paste private key</span></Button>      
+          <Button color="secondary" onClick={() => this.onRadioBtnClick(UNLOCK_WALLET_TYPE.PASTE_PRIV_KEY)} active={this.state.cSelected === UNLOCK_WALLET_TYPE.PASTE_PRIV_KEY}><span className="settings8">Paste private key</span></Button>
+          <Button color="secondary" onClick={() => this.onRadioBtnClick(UNLOCK_WALLET_TYPE.IMPORT_COPAY)} active={this.state.cSelected === UNLOCK_WALLET_TYPE.IMPORT_COPAY}><span className="settings8">Enter Copay recovery phrase</span></Button>   
         </ButtonGroup>
       </div>
     )
