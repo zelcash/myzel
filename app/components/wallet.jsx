@@ -131,6 +131,8 @@ class ZWalletUnlockKey extends React.Component {
       secretPhrase: '',
       copayPhrase: '',
       copayMaximum: 20,
+      copaySlip: 0,
+      copayAccount: 0,
       invalidPrivateKey: false,
       secretPhraseTooShort: false, 
       // Style for input button
@@ -180,7 +182,8 @@ class ZWalletUnlockKey extends React.Component {
     try{
       // Generate private keys from copay recovery phrase
       var pks = []
-      const i = 0
+      const account = parseInt(this.state.copayAccount)
+      const slip = parseInt(this.state.copaySlip)
       if (this.state.copayPhrase.split(' ').length != 12) {
         throw err
       }
@@ -197,14 +200,14 @@ class ZWalletUnlockKey extends React.Component {
       }
       //receive addresses
       for (let k = 0; k < maximum; k++){
-        let child = root.deriveHardened(44).deriveHardened(0).deriveHardened(i).derive(0).derive(k)
+        let child = root.deriveHardened(44).deriveHardened(slip).deriveHardened(account).derive(0).derive(k)
         let wif = child.toWIF()
         pks.push(wif)
       }
 
       //change addresses
       for (let k = 0; k < maximum; k++){
-        let child = root.deriveHardened(44).deriveHardened(0).deriveHardened(i).derive(1).derive(k)
+        let child = root.deriveHardened(44).deriveHardened(slip).deriveHardened(account).derive(1).derive(k)
         let wif = child.toWIF()
         pks.push(wif)
       }
@@ -329,7 +332,7 @@ class ZWalletUnlockKey extends React.Component {
     else if (this.props.unlockType == UNLOCK_WALLET_TYPE.IMPORT_COPAY){
       return (
         <div>
-          <Alert color="warning"><strong><span className="wallet1">Warning.</span></strong>&nbsp;<span className="wallet2">Only 20 change addresses and 20 receiving addresses are generated with maximum up to 100. If you think your Copay used more, contact Zel team. You can find out specific number of addresses needed in Settings -> specific wallet -> More options -> Wallet addresses. Look for the highest NUMBER in xpub/0/NUMBER or m/0/NUMBER. </span></Alert>
+          <Alert color="warning"><strong><span className="wallet1">Warning.</span></strong>&nbsp;<span className="wallet2">Only 20 change addresses and 20 receiving addresses are generated with maximum up to 100. If you think your Copay used more, contact Zel team. You can find out specific number of addresses needed in Settings -> specific wallet -> More options -> Wallet addresses. Look for the highest NUMBER in xpub/0/NUMBER or m/0/NUMBER. You can also change account number if you had more copay accounts</span></Alert>
           {this.state.secretPhraseTooShort ? <Alert color="danger"><strong><span className="import1">Error.</span></strong>&nbsp;<span className="wallet3">Invalid Copay recovery phrase. Recovery phrase shall contain 12 words separated with single space.</span></Alert> : '' }
           <InputGroup>
           <InputGroupAddon addonType="prepend">Copay recovery phrase</InputGroupAddon>                                     
@@ -346,6 +349,22 @@ class ZWalletUnlockKey extends React.Component {
               max="100"
               onChange={(e) => this.setState({copayMaximum: e.target.value})}
               value={this.state.copayMaximum}
+            />                    
+          </InputGroup>
+          <InputGroup>
+          <InputGroupAddon addonType="prepend">Account Number (usually 0)</InputGroupAddon>                                     
+            <Input
+              type="number"
+              onChange={(e) => this.setState({copayAccount: e.target.value})}
+              value={this.state.copayAccount}
+            />                    
+          </InputGroup>
+          <InputGroup>
+          <InputGroupAddon addonType="prepend">Slip Number (usually 0)</InputGroupAddon>                                     
+            <Input
+              type="number"
+              onChange={(e) => this.setState({copaySlip: e.target.value})}
+              value={this.state.copaySlip}
             />                    
           </InputGroup>
           <div style={{paddingTop: '8px'}}>
