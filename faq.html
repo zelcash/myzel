@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="shortcut icon" href="favicon.ico">
     <title>MyZelcash Wallet</title>
+    <style id="antiClickjack">
+        body{display:none !important;}
+    </style>
     <style>
         body {
             display: flex;
@@ -109,6 +112,14 @@ text-decoration: none;
                 }
             });
         };
+    </script>
+    <script type="text/javascript">
+        if (self === top) {
+            var antiClickjack = document.getElementById("antiClickjack");
+            antiClickjack.parentNode.removeChild(antiClickjack);
+        } else {
+            top.location = self.location;
+        }
     </script>
 <script type="text/javascript" src="js/faq.js"></script></body>
 </html>
