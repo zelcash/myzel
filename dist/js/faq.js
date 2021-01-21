@@ -30892,7 +30892,7 @@ var ZFooter = function (_React$Component) {
                     _react2.default.createElement(
                       'b',
                       null,
-                      ' MY.ZEL.CASH'
+                      ' MY.ZEL.NETWORK'
                     )
                   ),
                   _react2.default.createElement(
@@ -30910,7 +30910,7 @@ var ZFooter = function (_React$Component) {
                     ),
                     _react2.default.createElement(
                       'a',
-                      { href: 'https://www.zel.cash/charity/', target: '_blank', 'data-toggle': 'tooltip', title: 'Zelcash Charity' },
+                      { href: 'https://www.zel.network/charity/', target: '_blank', 'data-toggle': 'tooltip', title: 'Zelcash Charity' },
                       ' ',
                       _react2.default.createElement(
                         'span',
@@ -30925,7 +30925,7 @@ var ZFooter = function (_React$Component) {
               ),
               _react2.default.createElement(
                 'a',
-                { href: 'https://zel.cash', target: '_blank', 'data-toggle': 'tooltip', title: 'Website' },
+                { href: 'https://zel.network', target: '_blank', 'data-toggle': 'tooltip', title: 'Website' },
                 '  ',
                 _react2.default.createElement(_home2.default, { size: 28 }),
                 '  '
@@ -30967,7 +30967,7 @@ var ZFooter = function (_React$Component) {
               ),
               _react2.default.createElement(
                 'a',
-                { href: 'mailto:info@zel.cash', target: '_blank', 'data-toggle': 'tooltip', title: 'info@zel.cash' },
+                { href: 'mailto:info@zel.network', target: '_blank', 'data-toggle': 'tooltip', title: 'info@zel.network' },
                 '  ',
                 _react2.default.createElement(_envelopeO2.default, { size: 28 }),
                 '  '

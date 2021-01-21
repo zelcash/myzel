@@ -1150,8 +1150,8 @@ export default class ZWallet extends React.Component {
         showSettings: false,
         showWalletGen: false,
         compressPubKey: true,
-        insightAPI: 'https://explorer.zel.cash/api',
-        explorerURL: 'https://explorer.zel.cash/',
+        insightAPI: 'https://explorer.zel.network/api',
+        explorerURL: 'https://explorer.zel.network/',
         useTestNet: false,
         unlockType: UNLOCK_WALLET_TYPE.HD_WALLET
       }
@@ -1284,12 +1284,12 @@ export default class ZWallet extends React.Component {
     _settings.useTestNet = !_settings.useTestNet
 
     if (_settings.useTestNet){
-        _settings.insightAPI = 'https://testnet.zel.cash/api'
-      _settings.explorerURL = 'https://testnet.zel.cash/'
+        _settings.insightAPI = 'https://testnet.zel.network/api'
+      _settings.explorerURL = 'https://testnet.zel.network/'
     }
     else{
-        _settings.insightAPI = 'https://explorer.zel.cash/api'
-        _settings.explorerURL = 'https://explorer.zel.cash/'
+        _settings.insightAPI = 'https://explorer.zel.network/api'
+        _settings.explorerURL = 'https://explorer.zel.network/'
     }
 
     this.setState({
